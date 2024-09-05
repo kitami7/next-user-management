@@ -1,0 +1,6 @@
+/* ホバー時の背景色とテキスト色をカスタマイズ */
+.dropdown-item:hover,
+.dropdown-item:focus {
+  background-color: #007bff; /* ホバー時の背景色を青に設定 */
+  color: #ffffff; /* ホバー時のテキスト色を白に設定 */
+}
