@@ -15,6 +15,6 @@ export const convertDbToForm = (dbData: UserDbType): UserFormType => {
   return {
     ...dbData,
     age: dbData.age.toString(),
-    birthday: dbData.birthday ? dbData.birthday.toISOString().split('T')[0] : '',
+    birthday: dbData.birthday ? new Date(dbData.birthday).toISOString().split('T')[0] : '',
   };
 };
