@@ -1,8 +1,8 @@
-export type UserDbType = {
+export type UserTableTypes = {
     id: string;
     firstName: string;
     lastName: string;
-    birthday: Date | null;
-    age: number;
+    birthday: string;
+    age: string;
     gender: string;
 };

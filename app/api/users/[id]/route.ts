@@ -2,12 +2,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { selectUser, deleteUser, updateUser } from '@/lib/db_user';
 import { convertKeysToCamelCase } from '@/utils/transformUtils';
-import { UserFormType, UserFormSchema } from '@/schemas/userFormSchemas';
+import { UserFormType, UserPutSchema } from '@/schemas/userFormSchemas';
 import { convertFormToDb } from '@/service/userConverters';
 
 // リクエストボディのバリデーション
-const validateUser = (data: UserFormType): UserFormType => {
-  const result = UserFormSchema.safeParse(data);
+const validatePutUser = (data: UserFormType): UserFormType => {
+  const result = UserPutSchema.safeParse(data);
   if (!result.success) {
     throw new Error('Invalid user data');
   }
@@ -26,6 +26,7 @@ export async function GET(request: NextRequest, { params } : {params: { id: stri
       // レスポンスヘッダーの設定
       const headers = new Headers();
       headers.set('Cache-Control', 'no-cache');
+      console.log(camelCaseUsers);
       return NextResponse.json(camelCaseUsers, { headers });
     } else {
       // ユーザーが見つからない場合のエラーレスポンス
@@ -50,9 +51,11 @@ export async function PUT(request: NextRequest, { params } : {params: { id : str
     // ボディ部を取得
     const requestBody = await request.json();
     // ボディ部を検証
-    const userFormData = validateUser(requestBody);
+    const userFormData = validatePutUser(requestBody);
     // DBデータに変換する
     const userDbData = convertFormToDb(userFormData);
+    //
+    console.log('put');
     // 更新する
     await updateUser(userId, userDbData);
     return NextResponse.json({ message: 'User updated successfully' }, { status: 200 });

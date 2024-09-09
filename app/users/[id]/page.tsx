@@ -38,7 +38,11 @@ const EditUserPage: React.FC<EditUserPageProps> = ({ params }) => {
   // ユーザー取得リクエスト
   const getUserRequest = async (userId: string): Promise<UserDbType | undefined> => {
     try {
-      const response = await axios.get<UserDbType>(`/api/users/${userId}`);
+      const response = await axios.get<UserDbType>(`/api/users/${userId}`, {
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      });
       //console.log('User fetched successfully:', response.data);
       return response.data;
     } catch (error) {

@@ -2,11 +2,12 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { UserFormSchema, UserFormType } from "@/schemas/userFormSchemas";
+import { UserFormType, UserPostSchema, UserPutSchema } from "@/schemas/userFormSchemas";
 import { UserDbType } from "@/types/userDbTypes";
 import { useForm, SubmitHandler, FieldErrors } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { convertDbToForm } from "@/service/userConverters";
+import { undefined } from "zod";
 
 type UserFormProps = {
     edit: boolean;
@@ -22,7 +23,7 @@ const UserForm: React.FC<UserFormProps> = ({ edit, userId, getUserRequest, delet
     const [error, setError] = useState<string | null>(null);
 
     const { register, handleSubmit, formState: {errors, isDirty, isValid }, reset} = useForm<UserFormType>({
-        resolver: zodResolver(UserFormSchema),
+        resolver: zodResolver(edit ? UserPutSchema : UserPostSchema),
         defaultValues: {
             birthday: new Date().toISOString().split('T')[0],
         }
@@ -56,6 +57,10 @@ const UserForm: React.FC<UserFormProps> = ({ edit, userId, getUserRequest, delet
         if (edit) {
             // PUTリクエスト
             console.log('PUTリクエスト');
+            if (putUserRequest) {
+                const res = putUserRequest(formData.id, formData);
+                console.log(res);
+            }
         } else {
             // POSTリクエスト
             console.log('POSTリクエスト');
@@ -113,7 +118,7 @@ const UserForm: React.FC<UserFormProps> = ({ edit, userId, getUserRequest, delet
                     <label htmlFor="birthday" className="form-label">誕生日</label>
                     <input 
                         type="date" 
-                        {...register("birthday", {valueAsDate: true})} 
+                        {...register("birthday")} 
                         id="birthday" 
                         className={`form-control ${errors.birthday ? 'is-invalid' : ''}`}
                     />

@@ -1,5 +1,6 @@
 // app/users/page.tsx
 
+import { convertBirthday, convertDbToTable, convertGender } from "@/service/userConverters";
 import { UserDbType } from "@/types/userDbTypes";
 import Link from "next/link";
 
@@ -38,22 +39,9 @@ const UserList = async () => {
                 <td>{user.id}</td>
                 <td>{user.firstName}</td>
                 <td>{user.lastName}</td>
-                <td>{user.birthday ? new Date(user.birthday).toLocaleDateString() : ""}</td>
+                <td>{convertBirthday(user.birthday)}</td>
                 <td>{user.age}</td>
-                <td>
-                  {(() => {
-                    switch (user.gender) {
-                      case 'm':
-                        return '男性';
-                      case 'f':
-                        return '女性';
-                      case 'o':
-                        return 'その他';
-                      default:
-                        return '不明';
-                    }
-                  })()}
-                </td>
+                <td>{convertGender(user.gender)}</td>
                 <td>
                   <Link href={`/users/${user.id}`}>編集</Link>
                 </td>
