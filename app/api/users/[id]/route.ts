@@ -4,19 +4,23 @@ import { selectUser, deleteUser, updateUser } from '@/lib/db_user';
 import { convertKeysToCamelCase } from '@/utils/transformUtils';
 import { UserFormType, UserPutSchema } from '@/schemas/userFormSchemas';
 import { convertFormToDb } from '@/service/userConverters';
+import { UserDbType } from '@/types/userDbTypes';
 
-// リクエストボディのバリデーション
-const validatePutUser = (data: UserFormType): UserFormType => {
-  const result = UserPutSchema.safeParse(data);
-  if (!result.success) {
-    throw new Error('Invalid user data');
-  }
-  return result.data;
+// PUTリクエストのバリデーション
+const validatePutUser = async (data: UserFormType): Promise<UserFormType> => {
+  try {
+    const result = await UserPutSchema.parseAsync(data);
+    return result;
+  } catch (error) {
+    console.error('バリデーション更新エラー');
+    throw new Error('バリデーション変更エラー');
+  }  
 };
 
 // GET メソッドの処理
 export async function GET(request: NextRequest, { params } : {params: { id: string } }) {
   try {
+    console.log('GETエンドポイント');
     const userId = params.id;
     // ユーザーIDに基づいてデータを取得
     const snakeCaseUsers = await selectUser(userId);
@@ -42,6 +46,7 @@ export async function GET(request: NextRequest, { params } : {params: { id: stri
 // PUT メソッドの処理
 export async function PUT(request: NextRequest, { params } : {params: { id : string } }) {
   try {
+    console.log('PUTエンドポイント');
     // IDを取得
     const userId = params.id;
     // IDを検証
@@ -49,13 +54,12 @@ export async function PUT(request: NextRequest, { params } : {params: { id : str
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
     // ボディ部を取得
-    const requestBody = await request.json();
+    const userFormData: UserFormType = await request.json();
+    console.log(userFormData);
     // ボディ部を検証
-    const userFormData = validatePutUser(requestBody);
+    const validatedData = await validatePutUser(userFormData);
     // DBデータに変換する
-    const userDbData = convertFormToDb(userFormData);
-    //
-    console.log('put');
+    const userDbData: UserDbType = convertFormToDb(validatedData);
     // 更新する
     await updateUser(userId, userDbData);
     return NextResponse.json({ message: 'User updated successfully' }, { status: 200 });
@@ -69,6 +73,7 @@ export async function PUT(request: NextRequest, { params } : {params: { id : str
 // DELETE メソッドの処理
 export async function DELETE(request: NextRequest, { params } : { params: { id : string} }) {
   try {
+    console.log('DELETEエンドポイント');
     const userId = params.id;
     if (!userId) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });

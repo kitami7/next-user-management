@@ -37,13 +37,24 @@ const IdCreateSchema = (shouldExist: boolean) =>
     .regex(/^\d{4}$/, ValidationMessages.ID_FORMAT)
     .refine(async (value) => {
       try {
-        const response = await fetch(`/api/users/${value}`, { cache: 'no-store' });
-        if (!response.ok) throw new Error('Network response was not ok');
+        const response = await fetch(`http://localhost:3000/api/users/${value}`, {
+          cache: 'no-store' 
+        });
+        if (!response.ok) {
+          if (response.status >= 500) {
+            console.error('サーバーエラー');
+            return false;
+          }
+          if (response.status === 404 && !shouldExist) {
+            return true;
+          }
+          throw new Error('Network response was not ok');
+        }
         const data = await response.json();
-        console.log(data);
         return shouldExist ? data !== null && data !== undefined : data === null || data === undefined;
       } catch (error) {
         console.error('Error during fetch:', error);
+        console.log('error');
         return false;
       }
     }, {

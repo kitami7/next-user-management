@@ -1,8 +1,7 @@
-'use client';
-
 import UserForm from "@/app/components/UserForm";
+import { convertDbToForm } from "@/service/userConverters";
 import { UserDbType } from "@/types/userDbTypes";
-import axios from "axios";
+import { use } from "react";
 
 interface EditUserPageProps {
   params: {
@@ -10,56 +9,43 @@ interface EditUserPageProps {
   };
 }
 
-const EditUserPage: React.FC<EditUserPageProps> = ({ params }) => {
-  // ユーザー削除リクエスト
-  const deleteUserRequest = async (userId: string): Promise<any> => {
-    try {
-      const response = await axios.delete(`/api/users/${userId}`);
-      console.log('User deleted successfully:', response.data);
-      return response.data; // または必要に応じて適切な値を返す
-    } catch (error) {
-      console.error('There was an error deleting the user:', error);
-      return undefined; // エラー時に返す値（エラーハンドリング）
+const fetchUser = async (_id: string) => {
+  try {
+    const res = await fetch(`http://localhost:3000/api/users/${_id}`, {
+      method: 'GET',
+      cache: 'no-store',
+    });
+    if (res.ok) {
+      const user: UserDbType = await res.json();
+      return user;
+    } else {
+      throw new Error(`Failed to fetch user with id ${_id}. Status: ${res.status}`);
     }
-  };
-  
-  // ユーザー更新リクエスト
-  const putUserRequest = async (userId: string, userData: UserDbType): Promise<UserDbType | undefined> => {
-    try {
-      const response = await axios.put<UserDbType>(`/api/users/${userId}`, userData);
-      console.log('User updated successfully:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('There was an error updating the user:', error);
-      return undefined; // エラー時に返す値（エラーハンドリング）
-    }
-  };
+  } catch (error) {
+    console.error("Error fetching user:", error);
+    throw new Error("Failed to fetch user data.");
+  }
+}
+const EditUserPage: React.FC<EditUserPageProps> = async ({ params }) => {
 
-  // ユーザー取得リクエスト
-  const getUserRequest = async (userId: string): Promise<UserDbType | undefined> => {
-    try {
-      const response = await axios.get<UserDbType>(`/api/users/${userId}`, {
-        headers: {
-          'Cache-Control': 'no-cache',
-        },
-      });
-      //console.log('User fetched successfully:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('There was an error fetching the user:', error);
-      return undefined;
-    }
-  };
-
-
-    const { id } = params;
-    console.log(id);
-
+  try {
+    const user = await fetchUser(params.id);
+    console.log(user);
     return(
-        <>
-        <UserForm edit={true} userId={id} getUserRequest={getUserRequest}/>
-        </>
+      <>
+        <UserForm edit={true} defalutUser={convertDbToForm(user)}/>
+      </>
     );
+  } catch (error) {
+    return(
+      <>
+        <h1 className="text-center mb-4">ユーザー一覧</h1>
+        <div className="alert alert-danger" role="alert">
+          ユーザーの読み込み中にエラーが発生しました。
+        </div>
+      </>
+    );
+  }
 }
 
 export default EditUserPage;
