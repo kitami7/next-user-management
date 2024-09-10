@@ -8,62 +8,111 @@ import { useForm, SubmitHandler, FieldErrors } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { convertDbToForm } from "@/service/userConverters";
 import { undefined } from "zod";
+import { useRouter } from "next/navigation";
 
 type UserFormProps = {
     edit: boolean;
-    userId?: string;
-    getUserRequest?: (userId: string) => Promise<UserDbType | undefined>;
-    deleteUserRequest?: (userId: string) => Promise<any>;
-    putUserRequest?: (userId: string, userData: UserFormType) => Promise<UserDbType | undefined>;
-    postUserRequest?: (userData: UserFormType) => Promise<UserDbType | undefined>;
+    defalutUser?: UserFormType;
 };
 
-const UserForm: React.FC<UserFormProps> = ({ edit, userId, getUserRequest, deleteUserRequest, putUserRequest, postUserRequest }) => {
-    const [defaultUser, setDefaultUser] = useState<UserFormType | null>(null);
+const UserForm: React.FC<UserFormProps> = ({ edit, defalutUser }) => {
     const [error, setError] = useState<string | null>(null);
+    const router = useRouter();
 
-    const { register, handleSubmit, formState: {errors, isDirty, isValid }, reset} = useForm<UserFormType>({
+    const { register, handleSubmit, getValues, formState: {errors, isDirty, isValid }, reset} = useForm<UserFormType>({
         resolver: zodResolver(edit ? UserPutSchema : UserPostSchema),
         defaultValues: {
-            birthday: new Date().toISOString().split('T')[0],
-        }
-    })
-    useEffect(() => {
-        if (!edit || !userId || !getUserRequest) {
-            return;
-        }
+            id: edit ? defalutUser?.id : '',
+            firstName: edit ? defalutUser?.firstName : '',
+            lastName: edit ? defalutUser?.lastName : '',
+            birthday: edit ? defalutUser?.birthday : '',
+            gender: edit ? defalutUser?.gender : '',
+        },
+    });
 
-        const fetchUser = async () => {
-            try {
-                const userDbData = await getUserRequest(userId);
-                if (userDbData) {
-                    const userFormData = convertDbToForm(userDbData);
-                    console.log(userDbData);
-                    reset(userFormData);
-                }
-            } catch (err) {
-                setError('Failed to fetch user');
-                console.error('Error fetching user:', err);
-            } finally {
+    // ユーザー追加
+    const postUser = async (userFormData: UserFormType): Promise<Response> => {
+        try {
+            const res = await fetch('http://localhost:3000/api/users', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(userFormData),
+            });
+            if (res.ok) {
+                console.log(res);
+                return res;
+            } else {
+                throw new Error('POSTエラー');
             }
-        };
+        } catch (error) {
+            throw new Error('ネットワークエラー');
+        }
+    }
 
-        fetchUser();
-    }, [edit, userId, getUserRequest, reset]);
+    // ユーザー変更
+    const putUser = async (id: string, userFormData: UserFormType): Promise<Response> => {
+        try {
+            const res = await fetch(`http://localhost:3000/api/users/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(userFormData),
+            });
+            if (res.ok) {
+                return res;
+            } else {
+                throw new Error('PUTエラー');
+            }
+        } catch (error) {
+            throw new Error('ネットワークエラー');
+        }
+    };
 
+    // ユーザー削除
+    const deleteUser = async (id: string): Promise<Response> => {
+        try {
+            const res = await fetch(`http://localhost:3000/api/users/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            if (res.ok) {
+                return res;
+            } else {
+                throw new Error('DELETEエラー');
+            }
+        } catch (error) {
+            throw new Error('ネットワークエラー');
+        }
+    }
     // PUTリクエストまたはPOSTリクエスト
     const handlePostOrPut: SubmitHandler<UserFormType> = async (formData) => {
-        console.log("post");
+        console.log('POST又はPUT');
         if (edit) {
-            // PUTリクエスト
-            console.log('PUTリクエスト');
-            if (putUserRequest) {
-                const res = putUserRequest(formData.id, formData);
-                console.log(res);
+            console.log('PUTリクエスト')
+            try {
+                const res = await putUser(formData.id, formData);
+                console.log(`PUT結果:${res}`);
+                router.push('/users');
+                router.refresh();
+            } catch (error) {
+                console.log('PUTエラー');
             }
         } else {
             // POSTリクエスト
             console.log('POSTリクエスト');
+            try {
+                const res = await postUser(formData);
+                console.log(`POST結果:${res}`);
+                router.push('/users');
+                router.refresh();
+            } catch(error) {
+                console.log('POSTエラー');
+            }
         }
         console.log(formData);
     };
@@ -74,14 +123,21 @@ const UserForm: React.FC<UserFormProps> = ({ edit, userId, getUserRequest, delet
     };        
     // DELETEリクエスト
     const handleDelete = async () => {
-        console.log('DELETEリクエスト');
-    };
+        try {
+            const id = getValues('id');
+            const res = await deleteUser(id);
+            console.log(res);
+            router.push('/users');
+            router.refresh();
+        } catch (error) {
+            console.log('DELETEエラー');
+        }
+    }
 
     if (error) return <p>{error}</p>;
 
     return (
         <>
-            <h1 className="text-center mb-4">{edit ? "ユーザー編集" : "ユーザー作成"}</h1>
             <form noValidate onSubmit={handleSubmit(handlePostOrPut, onError)}>
                 <div className="mb-3">
                     <label htmlFor="id" className="form-label">ID</label>
@@ -89,7 +145,8 @@ const UserForm: React.FC<UserFormProps> = ({ edit, userId, getUserRequest, delet
                         type="text" 
                         {...register('id')} 
                         id="id" 
-                        className={`form-control ${errors.id ? 'is-invalid' : ''}`} 
+                        className={`form-control ${errors.id ? 'is-invalid' : ''}`}
+                        readOnly={edit} 
                     />
                     {errors.id && <div className="invalid-feedback">{errors.id.message}</div>}
                 </div>
@@ -161,7 +218,7 @@ const UserForm: React.FC<UserFormProps> = ({ edit, userId, getUserRequest, delet
                 <div className="mb-3">
                     <button type="submit" className={`btn btn-${edit ? 'warning' : 'success'} me-2`}>{edit ? '変更' : '新規'}</button>
                     {edit && <button type="button" className="btn btn-danger me-2" onClick={handleDelete}>削除</button>}
-                    <button type="reset" className="btn btn-secondary">リセット</button>
+                    <button type="button" className="btn btn-secondary" onClick={() => { reset() }}>リセット</button>
                 </div>
             </form>
         </>
